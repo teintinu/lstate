@@ -1,0 +1,15 @@
+src
+*.map
+.nvmrc
+.eslintrc.js
+jest.config.js
+.vscode
+tsconfig.eslint.json
+tsconfig.settings.json
+tsconfig.test.json
+tsconfig.build.json
+tsconfig.json
+build.sh
+.coveralls.yml
+.github
+coverage

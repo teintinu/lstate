@@ -1,0 +1,25 @@
+{
+  "extends": "./tsconfig.settings.json",
+  "compilerOptions": {
+    "jsx": "react",
+    "lib": [
+      "ESNext",
+      "dom"
+    ],
+    "tsBuildInfoFile": "dist/.tsbuildinfo",
+    "rootDir": "./src",
+    "baseUrl": ".",
+    "outDir": "./dist"
+  },
+  "exclude": [
+    "dist"
+  ],
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "src/**/*.test.ts",
+    "src/**/*.test.tsx",
+    "src/**/*.spec.ts",
+    "src/**/*.spec.tsx"
+  ]
+}

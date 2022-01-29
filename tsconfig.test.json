@@ -1,0 +1,17 @@
+{
+  "extends": "./tsconfig.settings.json",
+  "compilerOptions": {
+    "target": "ES2021",
+    "rootDir": ".",
+    "baseUrl": ".",
+    "paths": {
+      "lstate": [
+        "./src"
+      ]
+    }
+  },
+  "exclude": [
+    "node_modules",
+    "dist"
+  ]
+}
