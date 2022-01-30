@@ -6,6 +6,7 @@ describe('lstate subscription tests', () => {
     beforeEach(() => {
         sample = createGlobalState({
             initial: {count: 1},
+            compare: (a, b) => a.count === b.count,
             reducers: (setter) => ({
                 setSame() {
                     setter((old) => old)
@@ -36,6 +37,7 @@ describe('lstate subscription tests', () => {
             fail('should not be called')
         })
         sample.setSame()
+        sample.inc(0)
         expect(sample.$.get()).toEqual({count: 1})
     });
     it('should support unsubscribe subscriptions', async() => {
