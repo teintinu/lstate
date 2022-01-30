@@ -14,6 +14,7 @@ module.exports = {
     tsconfigRootDir: __dirname,
     project: ['./tsconfig.eslint.json']
   },
+  ignorePatterns: ['coverage/*', '.eslintrc.js', 'node_modules/*', 'dist/*', 'jest.config.js'],
   plugins: [
     'react',
     '@typescript-eslint'

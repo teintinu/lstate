@@ -4,5 +4,4 @@
         "src/**/*.ts",
         ".eslintrc.js"
     ]
-  }
-  
+}

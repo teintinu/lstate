@@ -1,7 +1,7 @@
 {
   "name": "lstate",
   "description": "A simple, super-efficient and small (just 1.5kb) global state for React/Typescript applications",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "private": false,
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -23,6 +23,7 @@
     "eslint-plugin-import": "^2.25.3",
     "eslint-plugin-node": "^11.1.0",
     "eslint-plugin-promise": "^6.0.0",
+    "eslint-plugin-react": "^7.28.0",
     "jest": "^27.4.5",
     "pjobs": "^1.1.3",
     "react-dom": "^17.0.2",
@@ -39,7 +40,8 @@
     "test": "jest",
     "prepublishOnly": "yarn buildWithEsbuild && yarn test && yarn build",
     "test-coverage": "jest --coverage",
-    "lint": "eslint --fix --config .eslintrc.js"
+    "lint": "eslint --config .eslintrc.js src/**/*.ts",
+    "lint-fix": "eslint --fix --config .eslintrc.js src/**/*.ts"
   },
   "dependencies": {
     "react": "^17.0.2"
