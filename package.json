@@ -1,7 +1,7 @@
 {
   "name": "lstate",
   "description": "A simple, super-efficient and small (just 1.2kb) global state for React/Typescript applications",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": false,
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

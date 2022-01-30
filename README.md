@@ -15,10 +15,10 @@ npm install --save lstate
 ```typescript
 
 import React from 'react';
-import { createGlobalState, useGlobalState } from "./lstate";
+import { createGlobalState, useGlobalState } from "lstate";
 
 const sample = createGlobalState({
-    initial: {count: 1},
+    initial: {count: 0},
     reducers: (setter) => ({
         inc() {
             setter((old) => ({count: old.count + 1}))
@@ -30,9 +30,10 @@ export function App() {
   const { count } = useGlobalState(sample)
   return  <div className="App">
     <h1>Testing lstate</h1>
-    <h2>A simple, efficient and small (just 2kb) global state for React applications</h2>
+    <h2>A simple, super-efficient and small (just 1.2kb) global state for React/Typescript applications</h2>
     <p>count: {count}</p>
-    <button onClick={state.inc}>+</button>
+    <button onClick={sample.inc}>+</button>
   </div>
 }
 ```
+[Click here to see a running demo](https://codesandbox.io/s/gallant-wind-ksplp?file=/src/state.ts)

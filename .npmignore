@@ -13,3 +13,4 @@ build.sh
 .coveralls.yml
 .github
 coverage
+yarn-error.log
