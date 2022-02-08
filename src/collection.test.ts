@@ -4,8 +4,9 @@ import { defer, sleep } from 'pjobs'
 describe('collection subscription tests', () => {
   let sample: LCollection<{id: string, count: number}> & { inc(id: string, count: number): void, setSame(): void}
   beforeEach(() => {
+    const items = [{ id: 'a', count: 1 }, { id: 'b', count: 2 }]
     sample = createLState({
-      items: { a: { count: 1 }, b: { count: 2 } },
+      items,
       actions: ({ upsert, setter }) => ({
         setSame () {
           setter((old) => old)
@@ -23,7 +24,7 @@ describe('collection subscription tests', () => {
     expect(sample.$.get()).toEqual({ a: { count: 1 }, b: { count: 2 } })
   })
   it('should support load raw data', () => {
-    sample.$.load([{ id: 'c', count: 3 }, { id: 'd', count: 4 }])
+    sample.$.load({ c: { count: 3 }, d: { count: 4 } })
     expect(sample.$.get()).toEqual({ c: { count: 3 }, d: { count: 4 } })
   })
   it('should subscribe to inserts', async () => {

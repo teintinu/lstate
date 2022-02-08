@@ -36,7 +36,7 @@ export interface LCollection<T extends { id: string}> {
     $: {
         get(): FullReadOnly<LCollectionOf<T>>
         set: LStateSetter<LCollectionOf<T>>
-        load(data: FullReadOnly<LCollectionList<T>>): void
+        load(data: FullReadOnly<LCollectionOf<T>>): void
         subscribe(subscription: (collectionOf: FullReadOnly<LCollectionOf<T>>)=>void): ()=>void
         subscribeList(
             subscription: (items: FullReadOnly<LCollectionList<T>>)=>void
@@ -84,7 +84,7 @@ export interface LComputedDef<T extends {}, DEPS extends LAnyState[]> {
 }
 
 export interface LCollectionDef<T extends {id:string}, ACTIONS extends LStateActions> {
-    items: LCollectionOf<T>,
+    items: ArrayLike<T> | LCollectionOf<T>,
     actions: (dml: {
         setter: LStateSetter<LCollectionOf<T>>,
         upsert (id: string, fn:(old?: Omit<T, 'id'>)=> Omit<T, 'id'>): void
@@ -103,7 +103,8 @@ export function createLState<T extends {id: string}, ACTIONS extends LStateActio
 // eslint-disable-next-line no-redeclare
 export function createLState (def: any): any {
   let isSame : (a: any, b: any) => boolean = def.compare || ((a, b) => a === b)
-  let value: any = def.initial || def.items || def.default
+  const items = def.items && (Array.isArray(def.items) ? collectionListToCollectionOf(def.items) : def.items)
+  let value: any = def.initial || items || def.default
   const deps = def.dependencies
   const compute = def.compute
   let subscriptions = new Set<(value: any) => void>()
@@ -139,11 +140,11 @@ export function createLState (def: any): any {
   }
   if (!def.compute) {
     self.$.setter = setter
-    if (def.actions) self = { ...self, ...def.actions(def.items ? { setter, upsert, remove } : setter) }
+    if (def.actions) self = { ...self, ...def.actions(items ? { setter, upsert, remove } : setter) }
   }
-  if (def.items) {
+  if (items) {
     self.$.load = (data: any) => {
-      setter(() => collectionListToCollectionOf(data))
+      setter(() => data)
     }
     self.$.subscribeList = (
       subscription: (items: any)=>void
