@@ -84,7 +84,7 @@ export interface LComputedDef<T extends {}, DEPS extends LAnyState[]> {
 }
 
 export interface LCollectionDef<T extends {id:string}, ACTIONS extends LStateActions> {
-    default: LCollectionOf<T>,
+    items: LCollectionOf<T>,
     actions: (dml: {
         setter: LStateSetter<LCollectionOf<T>>,
         upsert (id: string, fn:(old?: Omit<T, 'id'>)=> Omit<T, 'id'>): void
@@ -103,7 +103,7 @@ export function createLState<T extends {id: string}, ACTIONS extends LStateActio
 // eslint-disable-next-line no-redeclare
 export function createLState (def: any): any {
   let isSame : (a: any, b: any) => boolean = def.compare || ((a, b) => a === b)
-  let value: any = def.initial || def.default
+  let value: any = def.initial || def.items || def.default
   const deps = def.dependencies
   const compute = def.compute
   let subscriptions = new Set<(value: any) => void>()
@@ -139,9 +139,9 @@ export function createLState (def: any): any {
   }
   if (!def.compute) {
     self.$.setter = setter
-    if (def.actions) self = { ...self, ...def.actions(def.default ? { setter, upsert, remove } : setter) }
+    if (def.actions) self = { ...self, ...def.actions(def.items ? { setter, upsert, remove } : setter) }
   }
-  if (def.default) {
+  if (def.items) {
     self.$.load = (data: any) => {
       setter(() => collectionListToCollectionOf(data))
     }

@@ -5,7 +5,7 @@ describe('collection subscription tests', () => {
   let sample: LCollection<{id: string, count: number}> & { inc(id: string, count: number): void, setSame(): void}
   beforeEach(() => {
     sample = createLState({
-      default: { a: { count: 1 }, b: { count: 2 } },
+      items: { a: { count: 1 }, b: { count: 2 } },
       actions: ({ upsert, setter }) => ({
         setSame () {
           setter((old) => old)
