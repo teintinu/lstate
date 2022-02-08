@@ -7,7 +7,7 @@ T extends object ? {
 }
 : T
 
-export type LStateSetter<T> = (fn:(oldvalue: FullReadOnly<T>)=>T) =>void
+export type LStateSetter<T> = (fn:(oldvalue: FullReadOnly<T>)=>undefined|T) =>void
 
 export interface LState<T extends {}> {
     $: {
@@ -47,7 +47,7 @@ export interface LCollection<T extends { id: string}> {
             subscription: (reduced: FullReadOnly<R>)=>void,
         ): ()=>void
         subscribeItem(id: string, subscription: (item?: FullReadOnly<LCollectionOf<T>>)=>void): ()=>void
-        upsert (id: string, fn:(old?: Omit<T, 'id'>)=> Omit<T, 'id'>): void
+        upsert (id: string, fn:(old?: Omit<T, 'id'>)=> undefined | Omit<T, 'id'>): void
         remove(id: string): void
         destroy(): void
     },
@@ -87,7 +87,7 @@ export interface LCollectionDef<T extends {id:string}, ACTIONS extends LStateAct
     items: ArrayLike<T> | LCollectionOf<T>,
     actions: (dml: {
         setter: LStateSetter<LCollectionOf<T>>,
-        upsert (id: string, fn:(old?: Omit<T, 'id'>)=> Omit<T, 'id'>): void
+        upsert (id: string, fn:(old?: Omit<T, 'id'>)=> undefined | Omit<T, 'id'>): void
         remove(id: string): void
     }) => ACTIONS
 }
@@ -103,7 +103,7 @@ export function createLState<T extends {id: string}, ACTIONS extends LStateActio
 // eslint-disable-next-line no-redeclare
 export function createLState (def: any): any {
   let isSame : (a: any, b: any) => boolean = def.compare || ((a, b) => a === b)
-  const items = def.items && (Array.isArray(def.items) ? collectionListToCollectionOf(def.items) : def.items)
+  const items = def.items && collectionListToCollectionOf(def.items)
   let value: any = def.initial || items || def.default
   const deps = def.dependencies
   const compute = def.compute
@@ -177,7 +177,7 @@ export function createLState (def: any): any {
   }
   function setter (fn:(oldvalue: any)=>any) {
     const newvalue = fn(value)
-    if (!isSame(value, newvalue)) {
+    if (newvalue && !isSame(value, newvalue)) {
       value = newvalue as any
       dispatch()
     }
@@ -205,12 +205,14 @@ export function createLState (def: any): any {
     setter((collectionOf: any) => {
       const item: any = collectionOf[id]
       const updatedItem: any = fn(item as any)
-      return deepCompare(item, updatedItem, true) === 0
-        ? collectionOf as any
-        : {
-            ...collectionOf,
-            [id]: updatedItem
-          }
+      if (updatedItem) {
+        return deepCompare(item, updatedItem, true) === 0
+          ? collectionOf as any
+          : {
+              ...collectionOf,
+              [id]: updatedItem
+            }
+      }
     })
   }
   function remove (id: string): void {
