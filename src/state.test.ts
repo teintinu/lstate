@@ -3,29 +3,28 @@
  */
 
 import { renderHook, act } from '@testing-library/react-hooks'
-import { createGlobalState, useGlobalState } from './lstate'
+import { createLState, useLState } from './lstate'
 import { sleep } from 'pjobs'
 
-const sample = createGlobalState({
-  initial: { count: 0 },
-  reducers: (setter) => ({
-    reset () {
-      setter(() => ({ count: 0 }))
-    },
-    inc () {
-      setter((old) => ({ count: old.count + 1 }))
-    }
+describe('useLState', () => {
+  const sample = createLState({
+    initial: { count: 0 },
+    actions: (setter) => ({
+      reset () {
+        setter(() => ({ count: 0 }))
+      },
+      inc () {
+        setter((old) => ({ count: old.count + 1 }))
+      }
+    })
   })
-})
-
-describe('useGlobalState', () => {
   beforeEach(() => sample.reset())
-  it('useState', async () => {
-    const { result } = renderHook(() => useGlobalState(sample))
+  it('useLState', async () => {
+    const { result } = renderHook(() => useLState(sample))
     expect(result.current).toEqual({ count: 0 })
   })
-  it('inkove reducers', async () => {
-    const { result } = renderHook(() => useGlobalState(sample))
+  it('inkove actions', async () => {
+    const { result } = renderHook(() => useLState(sample))
     act(() => {
       sample.inc()
     })
@@ -35,24 +34,16 @@ describe('useGlobalState', () => {
     })
     expect(result.current).toEqual({ count: 1 })
   })
-
-  // it("App loads with initial state of 0", async () => {
-  //   const {container} = render(<SampleApp />);
-  //   const val = container.querySelector("#val");
-  //   expect(val && val.textContent).toEqual("0");
-  // });
-
-  // it("Increment buttons work", () => {
-  //   const { container } = render(<SampleApp />);
-
-  //   let val = container.querySelector("#val");
-  //   expect(val && val.textContent).toEqual("0");
-
-  //   const inc = container.querySelector("#inc");
-  //   if (inc) fireEvent.click(inc)
-  //   else throw new Error("inc button not found")
-
-  //   val = container.querySelector("#val");
-  //   expect(val && val.textContent).toEqual("1");
-  // });
+  it.skip('inkove computed', async () => {
+    // await sleep(100)
+    // const { result } = renderHook(() => useLState(computed))
+    // act(() => {
+    //   sample.inc()
+    // })
+    // expect(result.current).toEqual({ count: 0 })
+    // await act(async () => {
+    //   await sleep(100)
+    // })
+    // expect(result.current).toEqual({ count: 1 })
+  })
 })

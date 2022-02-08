@@ -1,12 +1,12 @@
-import { createGlobalState, GlobalState } from './lstate'
+import { createLState, LState } from './lstate'
 import { defer } from 'pjobs'
 
 describe('lstate subscription tests', () => {
-  let sample: GlobalState<{count: number}> & { inc(count: number): void, setSame(): void}
+  let sample: LState<{count: number}> & { inc(count: number): void, setSame(): void}
   beforeEach(() => {
-    sample = createGlobalState({
+    sample = createLState({
       initial: { count: 1 },
-      reducers: (setter) => ({
+      actions: (setter) => ({
         setSame () {
           setter((old) => old)
         },

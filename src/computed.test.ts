@@ -1,13 +1,13 @@
-import { createGlobalState, GlobalState } from './lstate'
+import { createLState, LState, LComputed } from './lstate'
 import { defer, sleep } from 'pjobs'
 
 describe('count on stateB is double of count on stateA', () => {
-  let stateA: GlobalState<{count: number}> & { inc(count: number): void, setSame(): void}
-  let stateB: GlobalState<{count: number}>
+  let stateA: LState<{count: number}> & { inc(count: number): void, setSame(): void}
+  let stateB: LComputed<{count: number}>
   beforeEach(() => {
-    stateA = createGlobalState({
+    stateA = createLState({
       initial: { count: 1 },
-      reducers: (setter) => ({
+      actions: (setter) => ({
         setSame () {
           setter((old) => old)
         },
@@ -16,17 +16,12 @@ describe('count on stateB is double of count on stateA', () => {
         }
       })
     })
-    stateB = createGlobalState({
-      initial: { count: 1 },
-      dependencies: [
-        stateA,
-        (setter) => {
-          const a = stateA.$.get().count
-          setter(() => ({ count: a * 2 }))
-        }
-      ],
-      reducers: () => ({
-      })
+    stateB = createLState({
+      default: { count: 1 },
+      dependencies: [stateA],
+      compute: (setter, a) => {
+        setter(() => ({ count: a.count * 2 }))
+      }
     })
   })
   afterEach(() => {

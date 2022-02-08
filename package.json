@@ -1,7 +1,7 @@
 {
   "name": "lstate",
-  "description": "A simple, super-efficient and small (just 1.5kb) global state for React/Typescript applications",
-  "version": "1.1.1",
+  "description": "A simple, super-efficient and small (just 2.1kb) global state for React/Typescript applications",
+  "version": "1.2.1",
   "private": false,
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -35,7 +35,7 @@
   "scripts": {
     "build": "./build.sh",
     "buildDTS": "dts-bundle-generator --project ./tsconfig.build.json src/index.ts -o dist/index.d.ts",
-    "buildWithEsbuild": "esbuild --bundle src/index.ts --external:react --minify --platform=node --format=cjs --outfile=dist/index.js",
+    "buildWithEsbuild": "esbuild --bundle src/index.ts --external:react --minify --platform=node --format=esm --outfile=dist/index.js",
     "buildWithTSC": "tsc -p ./tsconfig.build.json",
     "test": "jest",
     "prepublishOnly": "yarn buildWithEsbuild && yarn test && yarn build",

@@ -2,7 +2,7 @@
 [![Coverage Status](https://coveralls.io/repos/github/teintinu/lstate/badge.svg?branch=main)](https://coveralls.io/github/teintinu/lstate?branch=main)
 
 # lstate
-A simple, super-efficient and small (just 1.5kb) global state for React/Typescript applications
+A simple, super-efficient and small (just 2.1kb) global state for React/Typescript applications
 
 # install
 
@@ -15,9 +15,9 @@ npm install --save lstate
 ```typescript
 
 import React from 'react';
-import { createGlobalState, useGlobalState } from "lstate";
+import { createLState, useLState } from "lstate";
 
-const sample = createGlobalState({
+const sample = createLState({
     initial: {count: 0},
     reducers: (setter) => ({
         inc() {
@@ -27,10 +27,10 @@ const sample = createGlobalState({
 })
 
 export function App() {
-  const { count } = useGlobalState(sample)
+  const { count } = useLState(sample)
   return  <div className="App">
     <h1>Testing lstate</h1>
-    <h2>A simple, super-efficient and small (just 1.5kb) global state for React/Typescript applications</h2>
+    <h2>A simple, super-efficient and small (just 2.1kb) global state for React/Typescript applications</h2>
     <p>count: {count}</p>
     <button onClick={sample.inc}>+</button>
   </div>
