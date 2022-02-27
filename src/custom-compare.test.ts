@@ -18,14 +18,14 @@ describe('lstate subscription tests', () => {
     })
   })
   afterEach(() => {
-    sample.$.destroy()
+    sample.$destroy()
   })
   it('should support initial value', () => {
-    expect(sample.$.get()).toEqual({ count: 1 })
+    expect(sample.$get()).toEqual({ count: 1 })
   })
   it('should subscribe to changes', async () => {
     const d = defer<void>()
-    sample.$.subscribe((v) => {
+    sample.$subscribe((v) => {
       expect(v).toEqual({ count: 2 })
       d.resolve()
     })
@@ -33,19 +33,19 @@ describe('lstate subscription tests', () => {
     return d.promise
   })
   it('should not fire change event when set to the same value', async () => {
-    sample.$.subscribe((v) => {
+    sample.$subscribe((v) => {
       expect(v).toBe('should not be called')
     })
     sample.setSame()
     sample.inc(0)
-    expect(sample.$.get()).toEqual({ count: 1 })
+    expect(sample.$get()).toEqual({ count: 1 })
   })
   it('should support unsubscribe subscriptions', async () => {
-    const unscribe = sample.$.subscribe((v) => {
+    const unscribe = sample.$subscribe((v) => {
       expect(v).toBe('should not be called')
     })
     unscribe()
     sample.inc(1)
-    expect(sample.$.get()).toEqual({ count: 2 })
+    expect(sample.$get()).toEqual({ count: 2 })
   })
 })

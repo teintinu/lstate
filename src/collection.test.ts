@@ -18,18 +18,18 @@ describe('collection subscription tests', () => {
     })
   })
   afterEach(() => {
-    sample.$.destroy()
+    sample.$destroy()
   })
   it('should support initial value', () => {
-    expect(sample.$.get()).toEqual({ a: { count: 1 }, b: { count: 2 } })
+    expect(sample.$get()).toEqual({ a: { count: 1 }, b: { count: 2 } })
   })
   it('should support load raw data', () => {
-    sample.$.load({ c: { count: 3 }, d: { count: 4 } })
-    expect(sample.$.get()).toEqual({ c: { count: 3 }, d: { count: 4 } })
+    sample.$load({ c: { count: 3 }, d: { count: 4 } })
+    expect(sample.$get()).toEqual({ c: { count: 3 }, d: { count: 4 } })
   })
   it('should subscribe to inserts', async () => {
     const d = defer<void>()
-    sample.$.subscribe((v) => {
+    sample.$subscribe((v) => {
       expect(v).toEqual({ a: { count: 1 }, b: { count: 2 }, c: { count: 1 } })
       d.resolve()
     })
@@ -38,7 +38,7 @@ describe('collection subscription tests', () => {
   })
   it('should subscribe to updates', async () => {
     const d = defer<void>()
-    sample.$.subscribe((v) => {
+    sample.$subscribe((v) => {
       expect(v).toEqual({ a: { count: 1 }, b: { count: 3 } })
       d.resolve()
     })
@@ -47,23 +47,23 @@ describe('collection subscription tests', () => {
   })
   it('should subscribe to remove an item', async () => {
     const d = defer<void>()
-    sample.$.subscribe((v) => {
+    sample.$subscribe((v) => {
       expect(v).toEqual({ a: { count: 1 } })
       d.resolve()
     })
-    sample.$.remove('b')
+    sample.$remove('b')
     return d.promise
   })
   it('should not dispatch when try remove an unexisting data', async () => {
-    sample.$.subscribe((v) => {
+    sample.$subscribe((v) => {
       expect(v).toBe('should not be called')
     })
-    sample.$.remove('c')
+    sample.$remove('c')
     await sleep(150)
   })
   it('should subscribe to changes as list', async () => {
     const d = defer<void>()
-    sample.$.subscribeList((v) => {
+    sample.$subscribeList((v) => {
       expect(v).toEqual([{ id: 'a', count: 1 }, { id: 'b', count: 3 }])
       d.resolve()
     })
@@ -72,7 +72,7 @@ describe('collection subscription tests', () => {
   })
   it('should subscribe to changes quering by reducers', async () => {
     const d = defer<void>()
-    sample.$.subscribeQuery(
+    sample.$subscribeQuery(
       { totalMinusA: 0 },
       (prev, curr) => {
         if (curr.id !== 'a') {
@@ -89,7 +89,7 @@ describe('collection subscription tests', () => {
   })
   it('should subscribe to changes of an item', async () => {
     const d = defer<void>()
-    sample.$.subscribeItem('b', (item) => {
+    sample.$subscribeItem('b', (item) => {
       expect(item).toEqual({ count: 3 })
       d.resolve()
     })
@@ -97,20 +97,20 @@ describe('collection subscription tests', () => {
     return d.promise
   })
   it('should not fire change event when set to the same value', async () => {
-    sample.$.subscribe((v) => {
+    sample.$subscribe((v) => {
       expect(v).toBe('should not be called')
     })
     sample.setSame()
     sample.inc('a', 0)
     sleep(100)
-    expect(sample.$.get()).toEqual({ a: { count: 1 }, b: { count: 2 } })
+    expect(sample.$get()).toEqual({ a: { count: 1 }, b: { count: 2 } })
   })
   it('should support unsubscribe subscriptions', async () => {
-    const unscribe = sample.$.subscribe((v) => {
+    const unscribe = sample.$subscribe((v) => {
       expect(v).toBe('should not be called')
     })
     unscribe()
     sample.inc('a', 1)
-    expect(sample.$.get()).toEqual({ a: { count: 2 }, b: { count: 2 } })
+    expect(sample.$get()).toEqual({ a: { count: 2 }, b: { count: 2 } })
   })
 })
