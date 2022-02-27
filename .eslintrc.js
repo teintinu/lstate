@@ -25,5 +25,8 @@ module.exports = {
     react: {
       version: 'detect'
     }
+  },
+  rules: {
+    'no-use-before-define': 'no'
   }
 }
