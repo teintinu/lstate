@@ -3,7 +3,8 @@
   "compilerOptions": {
     "declaration": true,
     "lib": [
-      "ESNext"
+      "ESNext",
+      "DOM"
     ],
     "tsBuildInfoFile": "dist/.tsbuildinfo",
     "rootDir": "./src",

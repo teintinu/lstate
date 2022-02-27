@@ -1,29 +1,30 @@
 import { useEffect, useState } from 'react'
 import { deepCompare } from './deepCompare'
 
-export type FullReadOnly<T> = T extends Array<infer U> ? ReadonlyArray<FullReadOnly<U>> :
-T extends object ? {
-    readonly [P in keyof T]: FullReadOnly<T[P]>;
-}
-: T
+export type ReadOnlyObject<T> =
+    T extends (...args: any[]) => any ? T
+    : T extends Date ? T
+    : T extends object ? {
+        readonly [name in keyof T]: ReadOnlyObject<T[name]>
+    }
+    : T extends Array<infer K> ? ReadonlyArray<K>
+    :
+    T
 
-export type LStateSetter<T> = (fn:(oldvalue: FullReadOnly<T>)=>undefined|T) =>void
+export type LStateSetter<T> = (fn:(oldvalue: Readonly<T>)=>undefined|T) =>void
 
+export type Unscribe = ()=>void
 export interface LState<T extends {}> {
-    $: {
-        get(): FullReadOnly<T>
-        set: LStateSetter<T>
-        subscribe(subscription: (value: FullReadOnly<T>)=>void): ()=>void
-        destroy(): void
-    },
+    $get(): ReadOnlyObject<T>
+    $set: LStateSetter<T>
+    $subscribe(subscription: (value: ReadOnlyObject<T>)=>void): Unscribe
+    $destroy(): void
 }
 
 export interface LComputed<T extends {}> {
-    $: {
-        get(): FullReadOnly<T>
-        subscribe(subscription: (value: FullReadOnly<T>)=>void): ()=>void
-        destroy(): void
-    },
+    $get(): ReadOnlyObject<T>
+    $subscribe(subscription: (value: ReadOnlyObject<T>)=>void): Unscribe
+    $destroy(): void
 }
 
 export type LCollectionOf<T extends {id: string}> = {
@@ -33,31 +34,30 @@ export type LCollectionOf<T extends {id: string}> = {
 export type LCollectionList<T extends { id: string }> = T[]
 
 export interface LCollection<T extends { id: string}> {
-    $: {
-        get(): FullReadOnly<LCollectionOf<T>>
-        set: LStateSetter<LCollectionOf<T>>
-        load(data: FullReadOnly<LCollectionOf<T>>): void
-        subscribe(subscription: (collectionOf: FullReadOnly<LCollectionOf<T>>)=>void): ()=>void
-        subscribeList(
-            subscription: (items: FullReadOnly<LCollectionList<T>>)=>void
-        ): ()=>void
-        subscribeQuery<R=LCollectionList<T>>(
-            initial: R,
-            reducer: (last: R, item: FullReadOnly<T>)=>R,
-            subscription: (reduced: FullReadOnly<R>)=>void,
-        ): ()=>void
-        subscribeItem(id: string, subscription: (item?: FullReadOnly<LCollectionOf<T>>)=>void): ()=>void
-        upsert (id: string, fn:(old?: Omit<T, 'id'>)=> undefined | Omit<T, 'id'>): void
-        remove(id: string): void
-        destroy(): void
-    },
+    $get(): ReadOnlyObject<LCollectionOf<T>>
+    $set: LStateSetter<LCollectionOf<T>>
+    $load(data: ReadOnlyObject<LCollectionOf<T>>): void
+    $subscribe(subscription: (collectionOf: ReadOnlyObject<LCollectionOf<T>>)=>void): Unscribe
+    $subscribeList(
+        subscription: (items: ReadOnlyObject<LCollectionList<T>>)=>void
+    ): Unscribe
+    $subscribeQuery<R=LCollectionList<T>>(
+        initial: R,
+        reducer: (last: R, item: ReadOnlyObject<T>)=>R,
+        subscription: (reduced: ReadOnlyObject<R>)=>void,
+    ): Unscribe
+    $subscribeItem(id: string, subscription: (item?: ReadOnlyObject<LCollectionOf<T>>)=>void): Unscribe
+    $upsert (id: string, fn:(old?: Omit<T, 'id'>)=> undefined | Omit<T, 'id'>): void
+    $remove(id: string): void
+    $destroy(): void
 }
 
-export type LAnyState = LState<any> | LComputed<any> | LCollection<any>
+export type LAnyState<T extends object> = LState<T> | LComputed<T> | (T extends {id:string} ? LCollection<T> : never)
+
 export type ExtractLAnyState<T> = T extends LState<infer T1> ? T1 :
     T extends LComputed<infer T2> ? T2 :
     T extends LCollection<infer T3> ? T3 :
-    unknown
+    never
 
 export type ExtractLAnyStates<T> = {
     [key in keyof T]: ExtractLAnyState<T[key]>
@@ -67,20 +67,20 @@ export interface LStateActions {
     [key: string]: (...value: any[])=>any
 }
 
-export type DependencyCompute<T extends {}, DEPS extends LAnyState[]> =
+export type DependencyCompute<T extends {}, DEPS extends Array<LAnyState<any>>> =
   (setter: LStateSetter<T>, ...deps: ExtractLAnyStates<DEPS>) => void
 
 export interface LStateDef<T extends {}, ACTIONS extends LStateActions> {
     initial: T,
     actions: (setter: LStateSetter<T>)=> ACTIONS
-    compare?: (a: FullReadOnly<T>, b: T)=>boolean
+    compare?: (a: ReadOnlyObject<T>, b: T)=>boolean
 }
 
-export interface LComputedDef<T extends {}, DEPS extends LAnyState[]> {
+export interface LComputedDef<T extends {}, DEPS extends Array<LAnyState<any>>> {
     default: T,
     dependencies: DEPS,
     compute: DependencyCompute<T, DEPS>,
-    compare?: (a: FullReadOnly<T>, b: T)=>boolean
+    compare?: (a: ReadOnlyObject<T>, b: T)=>boolean
 }
 
 export interface LCollectionDef<T extends {id:string}, ACTIONS extends LStateActions> {
@@ -92,10 +92,16 @@ export interface LCollectionDef<T extends {id:string}, ACTIONS extends LStateAct
     }) => ACTIONS
 }
 
+export type LStateExtract<T> = T extends LState<infer U> ? U :
+T extends LComputed<infer U> ? U :
+T extends LCollection<infer U> ? U : never
+export type LStateExtractCollection<T> =
+T extends LCollection<infer U> ? U : never
+
 export function createLState<T extends {}, ACTIONS extends LStateActions> (
   def: LStateDef<T, ACTIONS>): LState<T> & ACTIONS
 // eslint-disable-next-line no-redeclare
-export function createLState<T extends {}, DEPS extends LAnyState[]> (
+export function createLState<T extends {}, DEPS extends Array<LAnyState<any>>> (
   def: LComputedDef<T, DEPS>): LComputed<T>;
 // eslint-disable-next-line no-redeclare
 export function createLState<T extends {id: string}, ACTIONS extends LStateActions> (
@@ -111,65 +117,60 @@ export function createLState (def: any): any {
   let unscribeDeps: Array<()=>void> | undefined
   if (deps) initDeps()
   let self: any = {
-    $: {
-      get: getter,
-      subscribe (subscription: (value: any) => void) {
-        subscriptions.add(subscription)
-        return () => subscriptions && subscriptions.delete(subscription)
-      },
-      destroy () {
-        if (self) {
-          if (unscribeDeps) {
-            unscribeDeps.forEach(fn => setTimeout(fn, 1))
-            unscribeDeps = undefined
-          }
-          Object.keys(self.$).forEach(key => {
-            delete (self.$)[key]
-          })
-          Object.keys(self).forEach(key => {
-            delete self[key]
-          })
-          value = null as any
-          subscriptions.clear()
-          subscriptions = null as any
-          self = null as any
-          isSame = null as any
+    $get: getter,
+    $subscribe (subscription: (value: any) => void) {
+      subscriptions.add(subscription)
+      return () => subscriptions && subscriptions.delete(subscription)
+    },
+    $destroy () {
+      if (self) {
+        if (unscribeDeps) {
+          unscribeDeps.forEach(fn => setTimeout(fn, 1))
+          unscribeDeps = undefined
         }
+        Object.keys(self).forEach(key => {
+          delete self[key]
+        })
+        value = null as any
+        subscriptions.clear()
+        subscriptions = null as any
+        self = null as any
+        isSame = null as any
       }
     }
   }
   if (!def.compute) {
-    self.$.setter = setter
+    self.$setter = setter
     if (def.actions) self = { ...self, ...def.actions(items ? { setter, upsert, remove } : setter) }
   }
   if (items) {
-    self.$.load = (data: any) => {
+    self.$load = (data: any) => {
       setter(() => data)
     }
-    self.$.subscribeList = (
+    self.$subscribeList = (
       subscription: (items: any)=>void
     ): (()=>void) => {
-      return self.$.subscribe(
+      return self.$subscribe(
         (collectionOf: any) =>
           subscription(collectionOfToCollectionList(collectionOf) as any)
       )
     }
-    self.$.subscribeQuery = (
+    self.$subscribeQuery = (
       initial: any,
       reducer: (last: any, item: any)=> any,
       subscription: (reduced: any)=>void
     ): (()=>void) => {
-      return self.$.subscribe((collectionOf: any) => subscription(
+      return self.$subscribe((collectionOf: any) => subscription(
         collectionOfToCollectionList(collectionOf).reduce(reducer, initial)
       ))
     }
-    self.$.subscribeItem = (id: string, subscription: (item: any)=>void): (()=>void) => {
-      return self.$.subscribe((collectionOf: any) =>
+    self.$subscribeItem = (id: string, subscription: (item: any)=>void): (()=>void) => {
+      return self.$subscribe((collectionOf: any) =>
         subscription(collectionOf[id] as any)
       )
     }
-    self.$.upsert = upsert
-    self.$.remove = remove
+    self.$upsert = upsert
+    self.$remove = remove
   }
   return self
   function getter () {
@@ -190,13 +191,13 @@ export function createLState (def: any): any {
   function initDeps () {
     unscribeDeps = []
     let tm: any
-    unscribeDeps = deps.map((dep: any) => dep.$.subscribe(recompute))
+    unscribeDeps = deps.map((dep: any) => dep.$subscribe(recompute))
     recompute()
     function recompute () {
       if (tm) clearTimeout(tm)
       tm = setTimeout(() => {
         if (unscribeDeps) {
-          compute(setter, ...deps.map((dep: any) => dep.$.get()) as any)
+          compute(setter, ...deps.map((dep: any) => dep.$get()) as any)
         }
       }, 100)
     }
@@ -227,12 +228,12 @@ export function createLState (def: any): any {
 }
 
 export function useLState<T> (state:LState<T>) {
-  const [value, setValue] = useState(() => state.$.get())
-  useEffect(() => state.$.subscribe(setValue), [])
+  const [value, setValue] = useState(() => state.$get())
+  useEffect(() => state.$subscribe(setValue), [])
   return value
 }
 
-export function collectionListToCollectionOf<T extends {id: string}> (list: FullReadOnly<LCollectionList<T>>): LCollectionOf<T> {
+export function collectionListToCollectionOf<T extends {id: string}> (list: ReadOnlyObject<LCollectionList<T>>): LCollectionOf<T> {
   const ret:LCollectionOf<T> = {} as any
   list.forEach((item) => {
     const { id, ...data } = item
@@ -241,6 +242,6 @@ export function collectionListToCollectionOf<T extends {id: string}> (list: Full
   return ret
 }
 
-export function collectionOfToCollectionList<T extends {id: string}> (collection: FullReadOnly<LCollectionOf<T>>): LCollectionList<T> {
+export function collectionOfToCollectionList<T extends {id: string}> (collection: ReadOnlyObject<LCollectionOf<T>>): LCollectionList<T> {
   return Object.keys(collection).map((id) => ({ id, ...collection[id] } as any as T))
 }
