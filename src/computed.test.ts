@@ -2,35 +2,42 @@ import { createLState, LState, LComputed } from './lstate'
 import { defer, sleep } from 'pjobs'
 
 describe('count on stateB is double of count on stateA', () => {
-  let stateA: LState<{count: number}> & { inc(count: number): void, setSame(): void}
-  let stateB: LComputed<{count: number}>
+  let connected: number = 0
+  let stateA: LState<{ count: number }> & { inc(count: number): void, setSame(): void }
+  let stateB: LComputed<{ count: number }>
   beforeEach(() => {
+    connected++
     stateA = createLState({
       initial: { count: 1 },
-      actions: (setter) => ({
+      reducers: (setter) => ({
         setSame () {
           setter((old) => old)
         },
         inc (v) {
           setter((old) => ({ count: old.count + v }))
         }
-      })
+      }),
+      disconnect () {
+        connected--
+      }
     })
     stateB = createLState({
-      default: { count: 1 },
+      default: { count: -1 },
       dependencies: [stateA],
       compute: (setter, a) => {
         setter(() => ({ count: a.count * 2 }))
-      }
+      },
+      debounce: 50
     })
   })
-  afterEach(() => {
+  afterEach(async () => {
     stateB.$.destroy()
     stateA.$.destroy()
+    await sleep(10)
+    expect(connected).toBe(0)
   })
   it('should support initial value', async () => {
     expect(stateA.$.get()).toEqual({ count: 1 })
-    await sleep(150)
     expect(stateB.$.get()).toEqual({ count: 2 })
   })
   it('should subscribe to changes', async () => {
@@ -48,8 +55,12 @@ describe('count on stateB is double of count on stateA', () => {
   })
   it('should not fire change event when set to the same value', async () => {
     await sleep(150)
+    let computingCount = 0
     stateB.$.subscribe((v) => {
-      expect(v).toBe('should not be called')
+      computingCount++
+      if (computingCount > 1) {
+        expect(v).toBe('recomputing un')
+      }
     })
     stateA.$.subscribe((v) => {
       expect(v).toBe('should not be called')

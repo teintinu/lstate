@@ -9,7 +9,7 @@ import { sleep } from 'pjobs'
 describe('useLState', () => {
   const sample = createLState({
     initial: { count: 0 },
-    actions: (setter) => ({
+    reducers: (setter) => ({
       reset () {
         setter(() => ({ count: 0 }))
       },
@@ -23,7 +23,7 @@ describe('useLState', () => {
     const { result } = renderHook(() => useLState(sample))
     expect(result.current).toEqual({ count: 0 })
   })
-  it('inkove actions', async () => {
+  it('invoke actions', async () => {
     const { result } = renderHook(() => useLState(sample))
     act(() => {
       sample.inc()
@@ -34,16 +34,22 @@ describe('useLState', () => {
     })
     expect(result.current).toEqual({ count: 1 })
   })
-  it.skip('inkove computed', async () => {
-    // await sleep(100)
-    // const { result } = renderHook(() => useLState(computed))
-    // act(() => {
-    //   sample.inc()
-    // })
-    // expect(result.current).toEqual({ count: 0 })
-    // await act(async () => {
-    //   await sleep(100)
-    // })
-    // expect(result.current).toEqual({ count: 1 })
+  it('invoke computed', async () => {
+    const computed = createLState({
+      default: { value: -1 },
+      dependencies: [sample],
+      compute: (setter, a) => {
+        setter(() => ({ value: a.count * 2 }))
+      }
+    })
+    const { result } = renderHook(() => useLState(computed))
+    expect(result.current).toEqual({ value: 0 })
+    act(() => {
+      sample.inc()
+    })
+    await act(async () => {
+      await sleep(150)
+    })
+    expect(result.current).toEqual({ value: 2 })
   })
 })
