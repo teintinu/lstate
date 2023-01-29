@@ -6,7 +6,7 @@ describe('lstate subscription tests', () => {
   beforeEach(() => {
     sample = createLState({
       initial: { count: 1 },
-      actions: (setter) => ({
+      reducers: (setter) => ({
         setSame () {
           setter((old) => old)
         },

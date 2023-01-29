@@ -1,18 +1,51 @@
-import { createLState, LCollection } from './lstate'
+/**
+ * @jest-environment jsdom
+ */
+
+import { renderHook, act } from '@testing-library/react-hooks'
+import { createLState, LCollection, useLState } from './lstate'
 import { defer, sleep } from 'pjobs'
 
 describe('collection subscription tests', () => {
-  let sample: LCollection<{id: string, count: number}> & { inc(id: string, count: number): void, setSame(): void}
+  interface Employee {
+    _id: number
+    name: string
+    salary: number
+  }
+  const sampleEmployees: Employee[] = [
+    {
+      _id: 1,
+      name: 'one',
+      salary: 100
+    },
+    {
+      _id: 2,
+      name: 'two',
+      salary: 200
+    }
+  ]
+  const sampleEmployees2: Employee[] = [
+    ...sampleEmployees,
+    {
+      _id: 3,
+      name: 'three',
+      salary: 100
+    }
+  ]
+  let sample: LCollection<Employee, '_id'> & {
+    setSame(): void,
+    raiseSalary(id: number, amount: number): void,
+}
   beforeEach(() => {
-    const items = [{ id: 'a', count: 1 }, { id: 'b', count: 2 }]
     sample = createLState({
-      items,
-      actions: ({ upsert, setter }) => ({
+      id: '_id',
+      items: sampleEmployees,
+      reducers: ({ update, setter }) => ({
         setSame () {
           setter((old) => old)
         },
-        inc (id, v) {
-          upsert(id, (old) => ({ count: (old?.count || 0) + v }))
+        raiseSalary (id: number, amount:number) {
+          update(id, (old) => ({ salary: (old.salary || 0) + amount }))
         }
       })
     })
@@ -21,79 +54,124 @@ describe('collection subscription tests', () => {
     sample.$.destroy()
   })
   it('should support initial value', () => {
-    expect(sample.$.get()).toEqual({ a: { count: 1 }, b: { count: 2 } })
+    expect(sample.$.get()).toEqual(sampleEmployees)
   })
   it('should support load raw data', () => {
-    sample.$.load({ c: { count: 3 }, d: { count: 4 } })
-    expect(sample.$.get()).toEqual({ c: { count: 3 }, d: { count: 4 } })
+    sample.$.load(sampleEmployees2)
+    expect(sample.$.get()).toEqual(sampleEmployees2)
   })
   it('should subscribe to inserts', async () => {
     const d = defer<void>()
     sample.$.subscribe((v) => {
-      expect(v).toEqual({ a: { count: 1 }, b: { count: 2 }, c: { count: 1 } })
+      expect(v).toEqual([
+        ...sampleEmployees,
+        {
+          _id: 100,
+          name: 'hundred',
+          salary: 100
+        }
+      ])
       d.resolve()
     })
-    sample.inc('c', 1)
+    sample.$.upsert({
+      _id: 100,
+      name: 'hundred',
+      salary: 100
+    })
     return d.promise
   })
-  it('should subscribe to updates', async () => {
+  it('should subscribe to updates with upsert', async () => {
     const d = defer<void>()
     sample.$.subscribe((v) => {
-      expect(v).toEqual({ a: { count: 1 }, b: { count: 3 } })
+      expect(v).toEqual(sampleEmployees.map(e => {
+        if (e === sampleEmployees[0]) {
+          return {
+            ...e,
+            salary: 150
+          }
+        }
+        return e
+      }))
       d.resolve()
     })
-    sample.inc('b', 1)
+    sample.$.upsert({
+      ...sampleEmployees[0],
+      salary: 150
+    })
+    return d.promise
+  })
+  it('should subscribe to updates with filtered upsert', async () => {
+    const d = defer<void>()
+    sample.$.subscribe((v) => {
+      expect(v).toEqual(sampleEmployees.map(e => {
+        if (e === sampleEmployees[0]) {
+          return {
+            ...e,
+            salary: 150
+          }
+        }
+        return e
+      }))
+      d.resolve()
+    })
+    sample.$.update(
+      (e) => e.name === 'one',
+      (e) => ({
+        ...e,
+        salary: 150
+      }))
+    return d.promise
+  })
+  it('should subscribe to updates with update', async () => {
+    const d = defer<void>()
+    sample.$.subscribe((v) => {
+      expect(v).toEqual(sampleEmployees.map(e => {
+        if (e === sampleEmployees[0]) {
+          return {
+            ...e,
+            salary: 150
+          }
+        }
+        return e
+      }))
+      d.resolve()
+    })
+    sample.raiseSalary(1, 50)
+    return d.promise
+  })
+
+  it('should subscribe to remove an item', async () => {
+    const d = defer<void>()
+    sample.$.subscribe((v) => {
+      expect(v).toEqual([sampleEmployees[0]])
+      d.resolve()
+    })
+    sample.$.remove(2)
     return d.promise
   })
   it('should subscribe to remove an item', async () => {
     const d = defer<void>()
     sample.$.subscribe((v) => {
-      expect(v).toEqual({ a: { count: 1 } })
+      expect(v).toEqual([sampleEmployees[0]])
       d.resolve()
     })
-    sample.$.remove('b')
+    sample.$.remove(e => e.name === 'two')
     return d.promise
   })
-  it('should not dispatch when try remove an unexisting data', async () => {
+  it('should not dispatch when try remove an nonexisting data', async () => {
     sample.$.subscribe((v) => {
       expect(v).toBe('should not be called')
     })
-    sample.$.remove('c')
+    sample.$.remove(9)
     await sleep(150)
-  })
-  it('should subscribe to changes as list', async () => {
-    const d = defer<void>()
-    sample.$.subscribeList((v) => {
-      expect(v).toEqual([{ id: 'a', count: 1 }, { id: 'b', count: 3 }])
-      d.resolve()
-    })
-    sample.inc('b', 1)
-    return d.promise
-  })
-  it('should subscribe to changes quering by reducers', async () => {
-    const d = defer<void>()
-    sample.$.subscribeQuery(
-      { totalMinusA: 0 },
-      (prev, curr) => {
-        if (curr.id !== 'a') {
-          prev.totalMinusA += curr.count
-        }
-        return prev
-      },
-      (v) => {
-        expect(v).toEqual({ totalMinusA: 3 })
-        d.resolve()
-      })
-    sample.inc('b', 1)
-    return d.promise
   })
   it('should subscribe to changes of an item', async () => {
     const d = defer<void>()
-    sample.$.subscribeItem('b', (item) => {
-      expect(item).toEqual({ count: 3 })
+    sample.$.subscribeItem(2, (item) => {
+      expect(item).toEqual({ ...sampleEmployees[1], salary: 240 })
       d.resolve()
     })
-    sample.inc('b', 1)
+    sample.raiseSalary(2, 40)
     return d.promise
   })
   it('should not fire change event when set to the same value', async () => {
@@ -101,16 +179,70 @@ describe('collection subscription tests', () => {
       expect(v).toBe('should not be called')
     })
     sample.setSame()
-    sample.inc('a', 0)
+    sample.raiseSalary(1, 0)
     sleep(100)
-    expect(sample.$.get()).toEqual({ a: { count: 1 }, b: { count: 2 } })
+    expect(sample.$.get()).toEqual(sampleEmployees)
   })
   it('should support unsubscribe subscriptions', async () => {
     const unscribe = sample.$.subscribe((v) => {
       expect(v).toBe('should not be called')
     })
     unscribe()
-    sample.inc('a', 1)
-    expect(sample.$.get()).toEqual({ a: { count: 2 }, b: { count: 2 } })
+    sample.raiseSalary(1, 50)
+    sleep(100)
+    expect(sample.$.get()).toEqual(sampleEmployees.map(e => {
+      if (e === sampleEmployees[0]) {
+        return {
+          ...e,
+          salary: 150
+        }
+      }
+      return e
+    }))
+  })
+  describe('useLState on collection', () => {
+    it('initial items', async () => {
+      const { result } = renderHook(() => useLState(sample))
+      expect(result.current).toEqual(sampleEmployees)
+    })
+    it('invoke actions', async () => {
+      const { result } = renderHook(() => useLState(sample))
+      act(() => {
+        sample.raiseSalary(1, 50)
+      })
+      expect(result.current).toEqual(sampleEmployees)
+      await act(async () => {
+        await sleep(100)
+      })
+      expect(result.current).toEqual(sampleEmployees.map(e => {
+        if (e === sampleEmployees[0]) {
+          return {
+            ...e,
+            salary: 150
+          }
+        }
+        return e
+      }))
+    })
+  })
+  describe('useLState on collection item', () => {
+    it('initial value', async () => {
+      const { result } = renderHook(() => useLState(sample, 1))
+      expect(result.current).toEqual(sampleEmployees[0])
+    })
+    it('invoke actions', async () => {
+      const { result } = renderHook(() => useLState(sample, 1))
+      act(() => {
+        sample.raiseSalary(1, 50)
+      })
+      expect(result.current).toEqual(sampleEmployees[0])
+      await act(async () => {
+        await sleep(100)
+      })
+      expect(result.current).toEqual({
+        ...sampleEmployees[0],
+        salary: 150
+      })
+    })
   })
 })
