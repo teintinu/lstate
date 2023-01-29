@@ -1,16 +1,17 @@
+# lstate
+
 [![Node.js CI](https://github.com/teintinu/lstate/actions/workflows/test.yml/badge.svg)](https://github.com/teintinu/lstate/actions/workflows/test.yml)
 [![Coverage Status](https://coveralls.io/repos/github/teintinu/lstate/badge.svg?branch=main)](https://coveralls.io/github/teintinu/lstate?branch=main)
 
-# lstate
 A simple, super-efficient and small (just 2.4kb) global state for React/Typescript applications. A greater alternative to redux, MobX, Zustand...
 
-# install
+## install
 
 ```bash
 npm install --save lstate
 ```
 
-# usage
+## usage
 
 ```typescript
 // sample.ts
@@ -36,10 +37,12 @@ export function App() {
     <button onClick={sample.inc}>+</button>
   </div>
 }
+
 ```
+
 [Click here to see a running demo](https://codesandbox.io/s/gallant-wind-ksplp?file=/src/state.ts)
 
-# why?
+## why?
 
 LState was created with these directives:
 
@@ -47,9 +50,9 @@ LState was created with these directives:
 - Avoid unnecessary rendering
 - Best Typescript integration
 
-# Advanced features
+## Advanced features
 
-## computed states
+### computed states
 
 ```typescript
 // computed.ts
@@ -66,7 +69,7 @@ const double = createLState({
 })
 ````
 
-# collections of items
+### collections of items
 
 ```typescript
 // collection.ts

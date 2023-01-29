@@ -2,5 +2,9 @@
 	"search.exclude": {
 		"**/node_modules": true,
 	},
-	"typescript.disableAutomaticTypeAcquisition": true
+	"typescript.disableAutomaticTypeAcquisition": true,
+	"yaml.schemas": {
+		"file:///Users/fernandotolentino/.vscode-insiders/extensions/atlassian.atlascode-3.0.0/resources/schemas/pipelines-schema.json": "bitbucket-pipelines.yml",
+		"https://json.schemastore.org/github-workflow.json": "file:///Volumes/Work/teintinu/lstate/.github/workflows/deploy.yml"
+	}
 }
