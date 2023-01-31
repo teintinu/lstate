@@ -28,11 +28,9 @@ export const sample = createLState({
     })
 })
 
-export function App() {
+export function Sample() {
   const { count } = useLState(sample)
   return  <div className="App">
-    <h1>Testing lstate</h1>
-    <h2>A simple, super-efficient and small (just 2.4kb) global state for React/Typescript applications</h2>
     <p>count: {count}</p>
     <button onClick={sample.inc}>+</button>
   </div>
@@ -61,12 +59,23 @@ import { createLState, useLState } from "lstate";
 import { sample } from './sample'
 
 const double = createLState({
-    default: {value: 0},
-    deps: [sample],
-    computed: (setter, [sampleState]) => ({
-        setter((old) => ({count: sampleState.count * 2}))
-    })
+  default: {doubleOfCount: 0},
+  dependencies: [sample],
+  debounce: 3000,
+  compute: (setter, sampleValue) => {
+      setter((old) => ({doubleOfCount: sampleValue.count * 2}))
+  }
 })
+
+export function Computed() {
+  const { doubleOfCount } = useLState(double)
+  const { count } = useLState(sample)
+  return  <div className="App">
+    <p>count: {count}</p>
+    <p>doubleOfCount: {doubleOfCount}</p>
+    <button onClick={sample.inc}>+</button>
+  </div>
+}
 ````
 
 ### collections of items

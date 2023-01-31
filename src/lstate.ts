@@ -19,15 +19,16 @@ export interface LState<T extends {}> {
   },
 }
 
+export type LComputedValue<T extends {}> = [value: FullReadOnly<T>, pending: boolean]
 export interface LComputed<T extends {}> {
   $: {
-    get(): FullReadOnly<T>
-    subscribe(subscription: (value: FullReadOnly<T>) => void): () => void
+    get(): LComputedValue<T>
+    subscribe(subscription: (value: LComputedValue<T>) => void): () => void
     destroy(): void
   },
 }
 
-export type LCollectionFilter<T extends {}, ID extends keyof T> =T[ID] |((item:T)=>boolean)
+export type LCollectionFilter<T extends {}, ID extends keyof T> = T[ID] | ((item: T) => boolean)
 
 export interface LCollection<T extends {}, ID extends keyof T> {
   $: {
@@ -35,7 +36,7 @@ export interface LCollection<T extends {}, ID extends keyof T> {
     set: LStateSetter<T[]>
     load(data: T[]): void
     subscribe(subscription: (items: FullReadOnly<T[]>) => void): () => void
-    getItem(id: T[ID]): undefined|FullReadOnly<T>
+    getItem(id: T[ID]): undefined | FullReadOnly<T>
     subscribeItem(id: T[ID], subscription: (item?: FullReadOnly<T>) => void): () => void
     upsert(item: T): void
     update(id: LCollectionFilter<T, ID>, fn: (old: FullReadOnly<T>) => undefined | Partial<T>): void
@@ -107,7 +108,7 @@ export function createLState<T extends {}> (
   const items = colId && (definition as LCollectionDef<T, any, any>).items
   let value: unknown = (definition as LStateDef<T, any>).initial ||
     items ||
-    (definition as LComputedDef<T, any>).default
+    [(definition as LComputedDef<T, any>).default, true]
   let disconnect = (definition as LStateDef<T, any>).disconnect
   let deps = (definition as LComputedDef<T, any>).dependencies
   const debounce = (definition as LComputedDef<T, any>).debounce || 100
@@ -156,11 +157,11 @@ export function createLState<T extends {}> (
       setter(() => data)
     }
     self.$.getItem = (idval: any) => {
-      return (getter() as any).find((i:any) => i[colId] === idval)
+      return (getter() as any).find((i: any) => i[colId] === idval)
     }
     self.$.subscribeItem = (idval: any, subscription: (item: any) => void): (() => void) => {
       return self.$.subscribe((items: any) => {
-        const item = items.find((i:any) => i[colId] === idval)
+        const item = items.find((i: any) => i[colId] === idval)
         if (item) { subscription(item) }
       })
     }
@@ -190,6 +191,10 @@ export function createLState<T extends {}> (
     unscribeDeps = deps.map((dep: any) => dep.$.subscribe(recompute))
     recompute()
     function recompute () {
+      if (unscribeDeps && !((value as any)[1])) {
+        (value as any)[1] = true
+        dispatch()
+      }
       if (tm) clearTimeout(tm)
       tm = setTimeout(() => {
         if (unscribeDeps) {
@@ -205,7 +210,12 @@ export function createLState<T extends {}> (
     }
   }
   function computeIt () {
-    compute(setter, ...deps.map((dep: any) => dep.$.get()) as any)
+    compute((fn: (oldvalue: FullReadOnly<T>) => T | undefined) => {
+      const newvalue = fn((value as any)[0])
+      if (newvalue) {
+        setter(() => [newvalue, false])
+      }
+    }, ...deps.map((dep: any) => dep.$.get()) as any)
   }
   function upsert (item: any): void {
     setter((oldItems: T[]) => {
@@ -249,7 +259,7 @@ export function createLState<T extends {}> (
     })
   }
   function remove (filter: LCollectionFilter<T, any>): void {
-    setter((oldItems:T[]) => {
+    setter((oldItems: T[]) => {
       let changed = false
       const filterFn = createFilterItem(filter)
       const changedItems = oldItems.filter((oldItem) => {
@@ -264,15 +274,15 @@ export function createLState<T extends {}> (
   }
 }
 
-export function useLState<T extends {}> (state: LState<T>):FullReadOnly<T>;
+export function useLState<T extends {}>(state: LState<T>): FullReadOnly<T>;
 // eslint-disable-next-line no-redeclare
-export function useLState<T extends {}> (state: LComputed<T>):FullReadOnly<T>;
+export function useLState<T extends {}>(state: LComputed<T>): LComputedValue<T>;
 // eslint-disable-next-line no-redeclare
-export function useLState<T extends {}, ID extends keyof T> (state: LCollection<T, ID>):FullReadOnly<T[]>;
+export function useLState<T extends {}, ID extends keyof T>(state: LCollection<T, ID>): FullReadOnly<T[]>;
 // eslint-disable-next-line no-redeclare
-export function useLState<T extends {}, ID extends keyof T> (state: LCollection<T, ID>, id: T[ID]):FullReadOnly<T>;
+export function useLState<T extends {}, ID extends keyof T>(state: LCollection<T, ID>, id: T[ID]): FullReadOnly<T>;
 // eslint-disable-next-line no-redeclare
-export function useLState<T extends {}> (state: LAnyState<T>, id?: any):FullReadOnly<T>|FullReadOnly<T[]> {
+export function useLState<T extends {}> (state: LAnyState<T>, id?: any): FullReadOnly<T> | FullReadOnly<T[]> {
   const [value, setValue] = useState(() =>
     arguments.length === 2 ? (state as LCollection<T, any>).$.getItem(id) : state.$.get()
   )

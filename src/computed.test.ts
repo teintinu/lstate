@@ -4,7 +4,7 @@ import { defer, sleep } from 'pjobs'
 describe('count on stateB is double of count on stateA', () => {
   let connected: number = 0
   let stateA: LState<{ count: number }> & { inc(count: number): void, setSame(): void }
-  let stateB: LComputed<{ count: number }>
+  let stateB: LComputed<{ doubleOfCount: number }>
   beforeEach(() => {
     connected++
     stateA = createLState({
@@ -22,10 +22,10 @@ describe('count on stateB is double of count on stateA', () => {
       }
     })
     stateB = createLState({
-      default: { count: -1 },
+      default: { doubleOfCount: -1 },
       dependencies: [stateA],
       compute: (setter, a) => {
-        setter(() => ({ count: a.count * 2 }))
+        setter(() => ({ doubleOfCount: a.count * 2 }))
       },
       debounce: 50
     })
@@ -38,44 +38,73 @@ describe('count on stateB is double of count on stateA', () => {
   })
   it('should support initial value', async () => {
     expect(stateA.$.get()).toEqual({ count: 1 })
-    expect(stateB.$.get()).toEqual({ count: 2 })
+    expect(stateB.$.get()).toEqual([{ doubleOfCount: 2 }, false])
   })
   it('should subscribe to changes', async () => {
     const d = defer<void>()
-    stateB.$.subscribe((v) => {
-      expect(v).toEqual({ count: 4 })
-      d.resolve()
-    })
+    const log: string[] = []
+    let eventSeq = 0
     stateA.$.subscribe((v) => {
+      eventSeq++
+      if (eventSeq === 2) {
+        expect(log).toEqual(['B=default(pending)'])
+        log.push('A=1')
+      } else {
+        expect(log).toEqual([
+          'B=default(pending)',
+          'A=1',
+          'B=2'
+        ])
+        log.push('A=2')
+      }
       expect(v).toEqual({ count: 2 })
-      d.resolve()
     })
+    stateB.$.subscribe(([v, pending]) => {
+      eventSeq++
+      if (eventSeq === 1) {
+        expect(log).toEqual([])
+        log.push('B=default(pending)')
+      } else if (eventSeq === 3) {
+        expect(log).toEqual(['B=default(pending)', 'A=1'])
+        log.push('B=2')
+        expect(pending).toBe(true)
+        expect(v).toEqual({ doubleOfCount: 2 })
+      } else {
+        expect(log).toEqual(['B=default(pending)', 'A=1', 'B=2'])
+        expect(pending).toBe(false)
+        expect(v).toEqual({ doubleOfCount: 4 })
+        d.resolve()
+      }
+    })
+    await sleep(150)
     stateA.inc(1)
     return d.promise
   })
   it('should not fire change event when set to the same value', async () => {
     await sleep(150)
     let computingCount = 0
-    stateB.$.subscribe((v) => {
+    stateA.$.subscribe((v) => {
+      expect(v).toBe('should not be called')
+    })
+    stateB.$.subscribe(([v, pending]) => {
+      if (pending) return
       computingCount++
       if (computingCount > 1) {
         expect(v).toBe('recomputing un')
       }
     })
-    stateA.$.subscribe((v) => {
-      expect(v).toBe('should not be called')
-    })
     stateA.setSame()
     expect(stateA.$.get()).toEqual({ count: 1 })
     await sleep(150)
-    expect(stateB.$.get()).toEqual({ count: 2 })
+    expect(stateB.$.get()).toEqual([{ doubleOfCount: 2 }, false])
   })
   it('should support unsubscribe subscriptions', async () => {
     await sleep(150)
-    const unscribeB = stateB.$.subscribe((v) => {
+    const unscribeA = stateA.$.subscribe((v) => {
       expect(v).toBe('should not be called')
     })
-    const unscribeA = stateA.$.subscribe((v) => {
+    const unscribeB = stateB.$.subscribe(([v, pending]) => {
+      if (pending) return
       expect(v).toBe('should not be called')
     })
     unscribeB()
@@ -83,6 +112,6 @@ describe('count on stateB is double of count on stateA', () => {
     stateA.inc(1)
     expect(stateA.$.get()).toEqual({ count: 2 })
     await sleep(150)
-    expect(stateB.$.get()).toEqual({ count: 4 })
+    expect(stateB.$.get()).toEqual([{ doubleOfCount: 4 }, false])
   })
 })
