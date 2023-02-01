@@ -1,2 +1,2 @@
-export * from './lstate'
+export * from './state/lstate'
 export * from './deepCompare'
