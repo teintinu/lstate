@@ -42,14 +42,32 @@ describe('useLState', () => {
         setter(() => ({ value: a.count * 2 }))
       }
     })
-    const { result } = renderHook(() => useLState(computed))
-    expect(result.current).toEqual({ value: 0 })
-    act(() => {
-      sample.inc()
+    const { result } = renderHook(() => {
+      const res = useLState(computed)
+      const val: {
+        readonly value: number;
+      } = res[0]
+      const pending: boolean = res[1]
+      expect(typeof val).toBe('object')
+      expect(typeof val?.value).toBe('number')
+      expect(typeof val?.value).toBe('number')
+      expect(typeof pending).toBe('boolean')
+      return res
     })
     await act(async () => {
       await sleep(150)
     })
-    expect(result.current).toEqual({ value: 2 })
+    expect(result.current).toEqual([{ value: 0 }, false])
+    act(() => {
+      sample.inc()
+    })
+    await act(async () => {
+      await sleep(10)
+    })
+    expect(result.current).toEqual([{ value: 0 }, true])
+    await act(async () => {
+      await sleep(150)
+    })
+    expect(result.current).toEqual([{ value: 2 }, false])
   })
 })
