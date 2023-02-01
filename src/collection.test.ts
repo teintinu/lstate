@@ -56,8 +56,9 @@ describe('collection subscription tests', () => {
   it('should support initial value', () => {
     expect(sample.$.get()).toEqual(sampleEmployees)
   })
-  it('should support load raw data', () => {
+  it('should support load raw data', async () => {
     sample.$.load(sampleEmployees2)
+    await sleep(1)
     expect(sample.$.get()).toEqual(sampleEmployees2)
   })
   it('should subscribe to inserts', async () => {
@@ -189,7 +190,7 @@ describe('collection subscription tests', () => {
     })
     unscribe()
     sample.raiseSalary(1, 50)
-    sleep(100)
+    await sleep(100)
     expect(sample.$.get()).toEqual(sampleEmployees.map(e => {
       if (e === sampleEmployees[0]) {
         return {

@@ -1,5 +1,5 @@
 import { createLState, LState } from './lstate'
-import { defer } from 'pjobs'
+import { defer, sleep } from 'pjobs'
 import { deepCompare } from './deepCompare'
 
 describe('lstate with custom compare tests', () => {
@@ -21,7 +21,7 @@ describe('lstate with custom compare tests', () => {
   afterEach(() => {
     sample.$.destroy()
   })
-  it('should support initial value', () => {
+  it('should support initial value', async () => {
     expect(sample.$.get()).toEqual({ count: 1 })
   })
   it('should subscribe to changes', async () => {
@@ -47,6 +47,7 @@ describe('lstate with custom compare tests', () => {
     })
     unscribe()
     sample.inc(1)
+    await sleep(10)
     expect(sample.$.get()).toEqual({ count: 2 })
   })
 })
@@ -70,7 +71,7 @@ describe('lstate with deepCompare tests', () => {
   afterEach(() => {
     sample.$.destroy()
   })
-  it('should support initial value', () => {
+  it('should support initial value', async () => {
     expect(sample.$.get()).toEqual({ sub: { count: 1 } })
   })
   it('should subscribe to changes', async () => {
@@ -96,6 +97,7 @@ describe('lstate with deepCompare tests', () => {
     })
     unscribe()
     sample.inc(1)
+    await sleep(1)
     expect(sample.$.get()).toEqual({ sub: { count: 2 } })
   })
 })

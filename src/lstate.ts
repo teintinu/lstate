@@ -7,7 +7,10 @@ export type FullReadOnly<T> = T extends Array<infer U> ? ReadonlyArray<FullReadO
   }
   : T
 
-export type LStateSetter<T> = (fn: (oldvalue: FullReadOnly<T>) => undefined | T) => void
+export type LStateSetter<T> = (
+  value: FullReadOnly<T> |
+  ((oldvalue: FullReadOnly<T>) => undefined | FullReadOnly<T>)
+ )=>void
 
 export type Unscribe = () => void
 export interface LState<T extends {}> {
@@ -60,8 +63,16 @@ export interface LStateReducers {
   [key: string]: (...value: any[]) => any
 }
 
+export type DependencyComputeSetter<T extends {}, DEPS extends Array<LAnyState<any>>> =
+(
+  value: FullReadOnly<T> |
+  ((oldvalue: FullReadOnly<T>, ...deps: ExtractLAnyStates<DEPS>) => undefined | FullReadOnly<T>)
+)=>void
+
 export type DependencyCompute<T extends {}, DEPS extends Array<LAnyState<any>>> =
-  (setter: LStateSetter<T>, ...deps: ExtractLAnyStates<DEPS>) => void
+(
+  setter: DependencyComputeSetter<T, DEPS>
+)=>void|Promise<void>
 
 export interface LStateDef<T extends {}, REDUCERS extends LStateReducers> {
   initial: T,
@@ -74,7 +85,7 @@ export interface LComputedDef<T extends {}, DEPS extends Array<LAnyState<any>>> 
   default: T,
   dependencies: DEPS,
   compute: DependencyCompute<T, DEPS>,
-  debounce?: number,
+  throttle?: number,
   compare?: (a: FullReadOnly<T>, b: T) => number
 }
 
@@ -83,7 +94,7 @@ export interface LCollectionDef<T extends {}, ID extends keyof T, REDUCERS exten
   items: FullReadOnly<T[]>,
   compare?: (a: FullReadOnly<T>, b: T) => number
   reducers: (dml: {
-    setter: LStateSetter<FullReadOnly<T[]>>,
+    setter: LStateSetter<T[]>,
     upsert(item: T): void
     update(id: LCollectionFilter<T, ID>, fn: (old: FullReadOnly<T>) => undefined | Partial<T>): void
     remove(id: LCollectionFilter<T, ID>): void
@@ -111,7 +122,7 @@ export function createLState<T extends {}> (
     [(definition as LComputedDef<T, any>).default, true]
   let disconnect = (definition as LStateDef<T, any>).disconnect
   let deps = (definition as LComputedDef<T, any>).dependencies
-  const debounce = (definition as LComputedDef<T, any>).debounce || 100
+  const throttle = (definition as LComputedDef<T, any>).throttle || 100
   let compute = (definition as LComputedDef<T, any>).compute
   let subscriptions = new Set<(value: any) => void>()
   let unscribeDeps: Array<() => void> | undefined
@@ -171,36 +182,36 @@ export function createLState<T extends {}> (
   }
   return self
   function getter () {
-    if (deps && subscriptions.size === 0) computeIt()
     return value
   }
-  function setter (fn: (oldvalue: any) => any) {
-    const newvalue = fn(value)
-    if (newvalue && compare(value, newvalue) !== 0) {
-      value = newvalue as any
-      dispatch()
-    }
+  function setter (v: any|((oldvalue: any) => any)) {
+    Promise.resolve(typeof v === 'function' ? v(value) : v)
+      .then(newvalue => {
+        if (newvalue && compare(value, newvalue) !== 0) {
+          value = newvalue as any
+          dispatch()
+        }
+      })
   }
   function dispatch () {
-    subscriptions.forEach(subscription => {
-      setTimeout(() => subscription(value), 1)
-    })
+    subscriptions.forEach(subscription =>
+      subscription(value)
+    )
   }
   function initDeps () {
-    let tm: any
-    unscribeDeps = deps.map((dep: any) => dep.$.subscribe(recompute))
-    recompute()
-    function recompute () {
+    let shouldRun = true
+    unscribeDeps = deps.map((dep: any) => dep.$.subscribe(needRecompute))
+    needRecompute()
+    function needRecompute () {
       if (unscribeDeps && !((value as any)[1])) {
-        (value as any)[1] = true
-        dispatch()
+        value = [(value as any)[0], true]
+        setTimeout(dispatch, 1)
       }
-      if (tm) clearTimeout(tm)
-      tm = setTimeout(() => {
-        if (unscribeDeps) {
-          computeIt()
-        }
-      }, debounce)
+      shouldRun && setTimeout(() => {
+        shouldRun = true
+        computeIt()
+      }, throttle)
+      shouldRun = false
     }
   }
   function releaseDeps () {
@@ -210,12 +221,18 @@ export function createLState<T extends {}> (
     }
   }
   function computeIt () {
-    compute((fn: (oldvalue: FullReadOnly<T>) => T | undefined) => {
-      const newvalue = fn((value as any)[0])
-      if (newvalue) {
-        setter(() => [newvalue, false])
+    if (unscribeDeps && ((value as any)[1])) {
+      const cSetter: DependencyComputeSetter<T, any> = (nv) => {
+        Promise.resolve(
+          typeof nv === 'function'
+            ? nv((value as any)[0], ...deps.map((dep: any) => dep.$.get()) as any)
+            : nv)
+          .then(newvalue => {
+            newvalue && setter([newvalue, false])
+          })
       }
-    }, ...deps.map((dep: any) => dep.$.get()) as any)
+      compute(cSetter)
+    }
   }
   function upsert (item: any): void {
     setter((oldItems: T[]) => {
@@ -283,16 +300,16 @@ export function useLState<T extends {}, ID extends keyof T>(state: LCollection<T
 export function useLState<T extends {}, ID extends keyof T>(state: LCollection<T, ID>, id: T[ID]): FullReadOnly<T>;
 // eslint-disable-next-line no-redeclare
 export function useLState<T extends {}> (state: LAnyState<T>, id?: any): FullReadOnly<T> | FullReadOnly<T[]> {
+  const isItem = arguments.length === 2
   const [value, setValue] = useState(() =>
-    arguments.length === 2 ? (state as LCollection<T, any>).$.getItem(id) : state.$.get()
+    isItem ? (state as LCollection<T, any>).$.getItem(id) : state.$.get()
   )
   const cbSetValue = useCallback((value: FullReadOnly<T>) => setValue(value), [state, setValue])
   useEffect(() => {
-    if (arguments.length === 2) {
+    if (isItem) {
       return (state as LCollection<T, any>).$.subscribeItem(id, cbSetValue as any)
     }
     return (state as LState<T>).$.subscribe(cbSetValue as any)
-  },
-  [state, setValue])
+  }, [state, setValue])
   return value as any
 }

@@ -1,5 +1,5 @@
 import { createLState, LState } from './lstate'
-import { defer } from 'pjobs'
+import { defer, sleep } from 'pjobs'
 
 describe('lstate subscription tests', () => {
   let sample: LState<{count: number}> & { inc(count: number): void, setSame(): void}
@@ -19,7 +19,7 @@ describe('lstate subscription tests', () => {
   afterEach(() => {
     sample.$.destroy()
   })
-  it('should support initial value', () => {
+  it('should support initial value', async () => {
     expect(sample.$.get()).toEqual({ count: 1 })
   })
   it('should subscribe to changes', async () => {
@@ -44,6 +44,7 @@ describe('lstate subscription tests', () => {
     })
     unscribe()
     sample.inc(1)
+    await sleep(1)
     expect(sample.$.get()).toEqual({ count: 2 })
   })
 })
