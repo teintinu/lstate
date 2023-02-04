@@ -1,4 +1,4 @@
-import { createLState, LState, LStateActions, LStateSetter, ReadOnlyObject, useLState } from '../state/lstate'
+import { createLState, LState, LStateReducers, LStateSetter } from '../state/lstate'
 
 export const Anonymous: AuthAccount = { token: '', roles: 'anonymous' }
 export type RolesGranted = string[] | 'anonymous'
@@ -9,13 +9,13 @@ export interface AuthAccount {
   roles: RolesGranted
 }
 
-export type AuthDef<T extends AuthAccount, ACTIONS extends LStateActions> = {
+export type AuthDef<T extends AuthAccount, ACTIONS extends LStateReducers> = {
   initial: T,
-  actions: (setter: LStateSetter<T>)=> ACTIONS
+  reducers: (setter: LStateSetter<T>)=> ACTIONS
 }
 
-export function createLAuth<T extends AuthAccount, ACTIONS extends LStateActions>
-  (definition: AuthDef<T, ACTIONS>): LState<T> & ACTIONS {
+export function createLAuth<T extends AuthAccount, ACTIONS extends LStateReducers>
+(definition: AuthDef<T, ACTIONS>): LState<T> & ACTIONS {
   return createLState({
     ...definition
   })

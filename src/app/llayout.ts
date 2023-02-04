@@ -1,4 +1,4 @@
-import { Size } from "./lwindow"
+import { Size } from './lwindow'
 
 export interface AppPagelets {
   header: number | false,

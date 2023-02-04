@@ -1,5 +1,5 @@
-import { deepCompare } from "../deepCompare";
-import { createLState, LAnyState, LComputed, ReadOnlyObject, Unscribe } from "../state/lstate"
+import { deepCompare } from '../deepCompare'
+import { createLState, LAnyState } from '../state/lstate'
 
 export interface Size {
   width: number,
@@ -12,14 +12,14 @@ export interface Location {
 }
 
 export interface WindowHistory {
-  
+
 }
 
 export type ExtraWindowStates = {
   [name: string]: LAnyState<any>
 }
 
-export function createLWindowState<T extends ExtraWindowStates = {}>(
+export function createLWindowState<T extends ExtraWindowStates = {}> (
   window: Window, mode: 'pushState', extraWindowStates?: () => T) {
   const size = createLState({
     initial: {
@@ -28,9 +28,9 @@ export function createLWindowState<T extends ExtraWindowStates = {}>(
     } as Size,
     compare: deepCompare,
     disconnect: $destroy,
-    actions(setter) {
+    reducers (setter) {
       return {
-        refresh() {
+        refresh () {
           setter(() => ({
             width: window.innerWidth,
             height: window.innerHeight
@@ -42,26 +42,26 @@ export function createLWindowState<T extends ExtraWindowStates = {}>(
   const location = createLState({
     initial: {
       url: window.location.pathname,
-      title: window.document.head.title,
+      title: window.document.head.title
     } as Location,
     compare: deepCompare,
     disconnect: $destroy,
-    actions(setter) {
+    reducers (setter) {
       return {
-        refresh() {
+        refresh () {
           setter(() => ({
             url: window.location.pathname,
-            title: window.document.head.title,
+            title: window.document.head.title
           }))
         },
-        goUrl(url: string, replace: boolean): void {
+        goUrl (url: string, replace: boolean): void {
           if (replace) window.history.replaceState(undefined, '', url)
           else window.history.pushState(undefined, '', url)
           setTimeout(notifyUrl, 1)
         },
-        goHistory(n: number): void {
+        goHistory (n: number): void {
           window.history.go(n)
-        },
+        }
       }
     }
   })
@@ -76,22 +76,22 @@ export function createLWindowState<T extends ExtraWindowStates = {}>(
     ...extra
   }
   return self
-  function notifyAll() {
+  function notifyAll () {
     notifyUrl()
     notifySize()
   }
-  function notifySize() {
+  function notifySize () {
     size.refresh && size.refresh()
   }
-  function notifyUrl() {
+  function notifyUrl () {
     location.refresh && location.refresh()
   }
-  function $destroy() {
+  function $destroy () {
     if (self) {
       const copy = self
       self = undefined as any
       Object.keys(copy).forEach((n) => {
-        const d = copy[n]?.$destroy
+        const d = copy[n]?.$?.destroy
         if (d) {
           delete copy[n]
           d()

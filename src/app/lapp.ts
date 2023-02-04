@@ -1,6 +1,6 @@
 // /* eslint-disable no-use-before-define */
 
-export const x=1;
+export const x = 1
 // import React from 'react'
 // import { createLState, LState, ReadOnlyObject, Unscribe } from './state/lstate'
 // import { deepCompare } from './deepCompare'
@@ -35,10 +35,6 @@ export const x=1;
 //   submenu: AppMenuItem[],
 //   roles: RolesRequired
 // }
-
-
-
-
 
 // export function createLApplication (
 //   decl: AppDecl
@@ -270,4 +266,3 @@ export const x=1;
 //     }
 //     return { page, params }
 //   }
-

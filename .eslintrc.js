@@ -27,6 +27,6 @@ module.exports = {
     }
   },
   rules: {
-    'no-use-before-define': 'no'
+    'no-use-before-define': 'off'
   }
 }

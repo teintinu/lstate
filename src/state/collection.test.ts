@@ -2,9 +2,9 @@
  * @jest-environment jsdom
  */
 
-import { renderHook, act } from '@testing-library/react-hooks'
 import { createLState, LCollection, useLState } from './lstate'
 import { defer, sleep } from 'pjobs'
+import { renderHook } from '../test-utils/renderHook'
 
 describe('collection subscription tests', () => {
   interface Employee {
@@ -35,7 +35,7 @@ describe('collection subscription tests', () => {
   let sample: LCollection<Employee, '_id'> & {
     setSame(): void,
     raiseSalary(id: number, amount: number): void,
-}
+  }
   beforeEach(() => {
     sample = createLState({
       id: '_id',
@@ -44,14 +44,11 @@ describe('collection subscription tests', () => {
         setSame () {
           setter((old) => old)
         },
-        raiseSalary (id: number, amount:number) {
+        raiseSalary (id: number, amount: number) {
           update(id, (old) => ({ salary: (old.salary || 0) + amount }))
         }
       })
     })
-  })
-  afterEach(() => {
-    sample.$.destroy()
   })
   it('should support initial value', () => {
     expect(sample.$.get()).toEqual(sampleEmployees)
@@ -203,19 +200,16 @@ describe('collection subscription tests', () => {
   })
   describe('useLState on collection', () => {
     it('initial items', async () => {
-      const { result } = renderHook(() => useLState(sample))
-      expect(result.current).toEqual(sampleEmployees)
+      const hook = renderHook(() => useLState(sample))
+      hook.expect(sampleEmployees)
     })
     it('invoke actions', async () => {
-      const { result } = renderHook(() => useLState(sample))
-      act(() => {
+      const hook = renderHook(() => useLState(sample))
+      hook.expect(sampleEmployees)
+      await hook.act(() => {
         sample.raiseSalary(1, 50)
       })
-      expect(result.current).toEqual(sampleEmployees)
-      await act(async () => {
-        await sleep(100)
-      })
-      expect(result.current).toEqual(sampleEmployees.map(e => {
+      hook.expect(sampleEmployees.map(e => {
         if (e === sampleEmployees[0]) {
           return {
             ...e,
@@ -228,19 +222,16 @@ describe('collection subscription tests', () => {
   })
   describe('useLState on collection item', () => {
     it('initial value', async () => {
-      const { result } = renderHook(() => useLState(sample, 1))
-      expect(result.current).toEqual(sampleEmployees[0])
+      const hook = renderHook(() => useLState(sample, 1))
+      hook.expect(sampleEmployees[0])
     })
     it('invoke actions', async () => {
-      const { result } = renderHook(() => useLState(sample, 1))
-      act(() => {
+      const hook = renderHook(() => useLState(sample, 1))
+      hook.expect(sampleEmployees[0])
+      await hook.act(() => {
         sample.raiseSalary(1, 50)
       })
-      expect(result.current).toEqual(sampleEmployees[0])
-      await act(async () => {
-        await sleep(100)
-      })
-      expect(result.current).toEqual({
+      hook.expect({
         ...sampleEmployees[0],
         salary: 150
       })
